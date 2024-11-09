@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .layers import *
 
-
+# multiple res block + last layer is resblock with filter(multishapekernel)
 class EBlock(nn.Module):
     def __init__(self, out_channel, num_res, data):
         super(EBlock, self).__init__()
@@ -17,7 +17,7 @@ class EBlock(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-
+# same as Eblock 
 class DBlock(nn.Module):
     def __init__(self, channel, num_res, data):
         super(DBlock, self).__init__()
@@ -29,7 +29,8 @@ class DBlock(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-
+# Shallow Convolution Module
+# some basicConv and norm
 class SCM(nn.Module):
     def __init__(self, out_plane):
         super(SCM, self).__init__()
@@ -38,13 +39,15 @@ class SCM(nn.Module):
             BasicConv(out_plane // 4, out_plane // 2, kernel_size=1, stride=1, relu=True),
             BasicConv(out_plane // 2, out_plane // 2, kernel_size=3, stride=1, relu=True),
             BasicConv(out_plane // 2, out_plane, kernel_size=1, stride=1, relu=False),
-            nn.InstanceNorm2d(out_plane, affine=True)
+            nn.InstanceNorm2d(out_plane, affine=True) #apply norm to each channel of each image separately 
         )
 
     def forward(self, x):
         x = self.main(x)
         return x
 
+# Feature Aggregation Module
+# apply basic conv to encoder block and SCM output to combine them
 class FAM(nn.Module):
     def __init__(self, channel):
         super(FAM, self).__init__()
@@ -53,6 +56,7 @@ class FAM(nn.Module):
     def forward(self, x1, x2):
         return self.merge(torch.cat([x1, x2], dim=1))
 
+# final model
 class ConvIR(nn.Module):
     def __init__(self, version, data):
         super(ConvIR, self).__init__()

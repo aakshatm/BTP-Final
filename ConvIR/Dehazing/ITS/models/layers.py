@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# convolution (up or downsample as per transpose), optional batchnorm, relu
 class BasicConv(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, stride, bias=True, norm=False, relu=True, transpose=False):
         super(BasicConv, self).__init__()
@@ -25,7 +26,7 @@ class BasicConv(nn.Module):
     def forward(self, x):
         return self.main(x)
 
-
+# apply conv, deeppool, conv and residual connection
 class ResBlock(nn.Module):
     def __init__(self, in_channel, out_channel, data, filter=False):
         super(ResBlock, self).__init__()
@@ -38,16 +39,13 @@ class ResBlock(nn.Module):
     def forward(self, x):
         return self.main(x) + x
 
-
+# (avg pool -> conv -> attention)*3 + some interpolations
 class DeepPoolLayer(nn.Module):
     def __init__(self, k, k_out, data):
         super(DeepPoolLayer, self).__init__()
         self.pools_sizes = [8,4,2]
 
-        if data == 'ITS' or 'Densehaze' or 'Haze4k' or 'Ihaze' or 'Nhhaze' or 'NHR' or 'Ohaze':
-            dilation = [7,9,11]
-        elif data == 'GTA5':
-            dilation = [5,9,11]
+        dilation = [7,9,11]
             
         pools, convs, dynas = [],[],[]
         for j, i in enumerate(self.pools_sizes):
@@ -76,7 +74,7 @@ class DeepPoolLayer(nn.Module):
 
         return resl
 
-
+# ......:(
 class dynamic_filter(nn.Module):
     def __init__(self, inchannels, kernel_size=3, dilation=1, stride=1, group=8):
         super(dynamic_filter, self).__init__()
@@ -123,7 +121,7 @@ class dynamic_filter(nn.Module):
 
         return out_low + out_high
 
-
+# combine hight and width strip attention and take weighted sum of out and original image 
 class cubic_attention(nn.Module):
     def __init__(self, dim, group, dilation, kernel) -> None:
         super().__init__()
@@ -138,7 +136,9 @@ class cubic_attention(nn.Module):
         out = self.W_spatial_att(out)
         return self.gamma * out + x * self.beta
 
-
+# attention across specific strips (either height or width), which allows the model to capture elongated spatial features and improves interpretability in identifying linear features like edges.
+# dialation : https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+# .......:(
 class spatial_strip_att(nn.Module):
     def __init__(self, dim, kernel=3, dilation=1, group=2, H=True) -> None:
         super().__init__()
@@ -176,7 +176,7 @@ class spatial_strip_att(nn.Module):
 
         return out_low + out_high
 
-
+# combine cubic_attention and dynamic filter
 class MultiShapeKernel(nn.Module):
     def __init__(self, dim, kernel_size=3, dilation=1, group=8):
         super().__init__()
