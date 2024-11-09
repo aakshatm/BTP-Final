@@ -26,7 +26,7 @@ class BasicConv(nn.Module):
     def forward(self, x):
         return self.main(x)
 
-# apply conv, deeppool, conv and residual connection
+# apply conv, deeppool(optional), conv and residual connection
 class ResBlock(nn.Module):
     def __init__(self, in_channel, out_channel, data, filter=False):
         super(ResBlock, self).__init__()
